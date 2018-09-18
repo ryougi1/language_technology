@@ -4,9 +4,10 @@ import os.path
 import pickle
 # from sklearn.feature_extraction.text import TfidfVectorizer
 # from sklearn.feature_extraction.text import TfidfTransformer
-# from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.metrics.pairwise import cosine_similarity
 import copy
 import math
+import numpy
 
 master_dict = {}
 count_dict = {}
@@ -53,18 +54,32 @@ def calc_tfidf(files):
     tfidf_table = copy.deepcopy(master_dict)
     for key, value in tfidf_table.items():
         idf = math.log10((len(files) / len(value)))
+        tfidf_table[key] = {x:0 for x in files}
         for k, v in value.items():
             tfidf_table[key][k] = (len(v) / count_dict[k]) * idf
 
-    print(tfidf_table["et"]["bannlyst.txt"])
+    return tfidf_table
+
 
 def calc_cosine_similarities(tfidf_matrix):
-    cosines = [None] * len(files)
+    cosine_matrix = {}
+    for f in files:
+        cosine_matrix[f] = []
+        for w in tfidf_matrix:
+            cosine_matrix[f].append(tfidf_matrix[w][f])
+    
+    most_similar = (0, None, None)
+    for k1, v1 in cosine_matrix.items():
+        for k2, v2 in cosine_matrix.items():
+            if k1 == k2:
+                continue
 
-    for x in range(len(files)):
-        cosines[x] = cosine_similarity(tfidf_matrix[x:x+1], tfidf_matrix)
+            similarity = numpy.dot(v1, v2)/(numpy.linalg.norm(v1)*numpy.linalg.norm(v2)) #Should 
+            if similarity > most_similar[0]:
+                most_similar = (similarity, k1, k2)
 
-    return cosines
+    print(most_similar)
+
 
 
 if __name__ == '__main__':
@@ -74,6 +89,9 @@ if __name__ == '__main__':
 
     # open("master_index.txt", "w").write(str(master_dict))
     tfidf_matrix = calc_tfidf(files)
+    cosines = calc_cosine_similarities(tfidf_matrix)
+    for cos in cosine:
+        print(cos)
 
 #pickle.dump(master_dict, open("bannlyst.txt", "wb"))
 
