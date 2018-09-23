@@ -1,0 +1,37 @@
+Collecting a corpus
+
+1. Collect a corpus of at least 750,000 words. You will check the number of words using the Unix command wc -w.
+2. Alternatively, you can retrieve a corpus of novels by Selma Lagerlöf from this URL: http://fileadmin.cs.lth.se/cs/Education/EDAN20/corpus/Selma.txt.
+3. Run the concordance program to print the lines containing a specific word, for instance Nils.
+4. Run the tokenization program on your corpus and count the words using the Unix sort and uniq commands.
+
+Answer:
+Retrieved Selma.txt as corpus. Number of words using wc -w Selma.txt was 965392. Ran concordance program. Ran tokenization program (modified), counted words using Unix sort and uniq as such:
+python3 tokenizer.py < Selma.txt
+sort tokens.txt | uniq -c
+
+Normalizing a corpus
+
+1. Write a program to insert <s> and </s> tags to delimit sentences. You can start from the tokenization and modify it. Use a simple heuristics such as: a sentence starts with a capital letter and ends with a period. Estimate roughly the accuracy of your program.
+2. Modify your program to remove the punctuation signs and set all the text in lower case letters.
+3. The result should be a normalized text without punctuation signs where all the sentences are delimited with <s> and </s> tags.
+4. The five last lines of the text should look like this:
+    <s> hon hade fått större kärlek av sina föräldrar än någon annan han visste och sådan kärlek måste vändas i välsignelse </s>
+    <s> när prästen sa detta kom alla människor att se bort mot klara gulla och de förundrade sig över vad de såg </s>
+    <s> prästens ord tycktes redan ha gått i uppfyllelse </s>
+    <s> där stod klara fina gulleborg ifrån skrolycka hon som var uppkallad efter själva solen vid sina föräldrars grav och lyste som en förklarad </s>
+    <s> hon var likaså vacker som den söndagen då hon gick till kyrkan i den röda klänningen om inte vackrare </s>
+
+Answer:
+Done. See normalize.py.
+
+Counting unigrams and bigrams
+
+1. Read and try programs to compute the frequency of unigrams and bigrams of the training set: [Program folder].
+Answer:
+python3 count.py < Selma.txt
+python3 count_bigrams.py < Selma.txt
+2. What is the possible number of bigrams and their real number? Explain why such a difference. What would be the possible number of 4-grams.
+Answer:
+Possible number is [nr words - 1] if no repeating bigrams. Real number of bigrams in Selma.txt is 319877. Possible number of 4-grams would then be [nr words - 3].
+3. Propose a solution to cope with bigrams unseen in the corpus. This topic will be discussed during the lab session.

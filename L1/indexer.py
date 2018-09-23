@@ -4,9 +4,10 @@ import os.path
 import pickle
 # from sklearn.feature_extraction.text import TfidfVectorizer
 # from sklearn.feature_extraction.text import TfidfTransformer
-# from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.metrics.pairwise import cosine_similarity
 import copy
 import math
+import numpy
 
 master_dict = {}
 count_dict = {}
@@ -37,7 +38,6 @@ def index(file):
             else:
                 master_dict[word][file].append(match.start())
 
-
 def calc_tfidf(files):
     '''
     tfidf_vectorizer = TfidfVectorizer(input = 'filename', smooth_idf = False)
@@ -53,35 +53,43 @@ def calc_tfidf(files):
     tfidf_table = copy.deepcopy(master_dict)
     for key, value in tfidf_table.items():
         idf = math.log10((len(files) / len(value)))
+        tfidf_table[key] = {x:0 for x in files}
         for k, v in value.items():
             tfidf_table[key][k] = (len(v) / count_dict[k]) * idf
 
-    print(tfidf_table["et"]["bannlyst.txt"])
+    return tfidf_table
+
 
 def calc_cosine_similarities(tfidf_matrix):
-    cosines = [None] * len(files)
+    cosine_matrix = {}
+    for f in files:
+        cosine_matrix[f] = []
+        for w in tfidf_matrix:
+            cosine_matrix[f].append(tfidf_matrix[w][f])
 
-    for x in range(len(files)):
-        cosines[x] = cosine_similarity(tfidf_matrix[x:x+1], tfidf_matrix)
+    most_similar = (0, None, None)
+    for k1, v1 in cosine_matrix.items():
+        for k2, v2 in cosine_matrix.items():
+            if k1 == k2:
+                continue
 
-    return cosines
+            similarity = numpy.dot(v1, v2)/(numpy.linalg.norm(v1)*numpy.linalg.norm(v2)) #Should
+            if similarity > most_similar[0]:
+                most_similar = (similarity, k1, k2)
+
+    print("Most similar documents: ", most_similar[1], most_similar[2], "with value ", most_similar[0])
+
 
 
 if __name__ == '__main__':
     files = get_files("Selma", ".txt")
     for file in files:
         index(file)
-
-    # open("master_index.txt", "w").write(str(master_dict))
+    #print(master_dict.get("samlar"))
+    #open("master_index.txt", "w").write(str(master_dict))
     tfidf_matrix = calc_tfidf(files)
+    calc_cosine_similarities(tfidf_matrix)
+    #for cos in cosine:
+        #print(cos)
 
 #pickle.dump(master_dict, open("bannlyst.txt", "wb"))
-
-#for key, value in master_dict.items():
-    #print(key, value)
-
-#for key, value in master_dict.items():
-    #if (key == "samlar" or key == "ände"):
-        #print(key, value)
-
-#print(master_dict)
