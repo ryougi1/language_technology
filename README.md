@@ -1,2 +1,2 @@
-# language_technology
-EDAN20
+# EDAN20 Language Technology course at LTH
+With @Turbobollen
