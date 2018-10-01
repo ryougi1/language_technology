@@ -1,0 +1,56 @@
+Choosing a training and a test sets
+1. As annotated data and annotation scheme, you will use the data available from CoNLL 2000.
+2. Download both the training and test sets (the same as in the previous assignment) and decompress them.
+3. Be sure that you have the scikit-learn package: Start it by typing import sklearn in Python.
+
+Answer:
+Done.
+
+Baseline
+1. Read the baseline proposed by the organizers of the CoNLL 2000 shared task (In the Results Sect.). What do you think of it?
+2. Implement this baseline program. You may either create a completely new program or start from an existing program that you will modify.
+  * Complete the train function so that it computes the chunk distribution for each part of speech.
+    You will use the train file to derive your distribution and you will store the results in a dictionary.
+  * For each part of speech, select the most frequent chunk. In the example above, you will have (NN, I-NP)
+  * Using the resulting associations, apply your chunker to the test file.
+  * You will store your results in an output file that has four columns.
+    The three first columns will be the input columns from the test file: word, part of speech, and gold-standard chunk. You will append the predicted chunk as the 4th column.
+3. Measure the performance of the system. Use the conlleval.txt evaluation program used by the CoNLL 2000 shared task.
+
+Answer:
+1. Basing the model on simplest probability calculation seems reasonable for a baseline since you don't want anything lower than that.
+2. Done - see baseline_chunker.py.
+3. Done - perl conlleval.txt < out
+
+Using Machine Learning
+In this exercise, you will apply and extend the ml_chunker.py program.
+You will start from the original program you downloaded and modify it so that you understand how to improve the performance of your chunker.
+You will not add new features to the feature vector.
+
+The program that won the CoNLL 2000 shared task used a window of five words around the chunk tag to identify, c i .
+They built a feature vector consisting of:
+  * The values of the five words in this window: w i-2 , w i-1 , w i , w i+1 , w i+2
+  * The values of the five parts of speech in this window: t i-2 , t i-1 , t i , t i+1 , t i+2
+  * The values of the two previous chunk tags in the first part of the window: c i-2 , c i-1
+1. What is the feature vector that corresponds to the ml_chunker.py program? Is it the same Kudoh and Matsumoto used in their experiment?
+2. What is the performance of the chunker?
+3. Remove the lexical features (the words) from the feature vector and measure the performance. You should observe a decrease.
+4. What is the classifier used in the program? Try two other classifiers and measure their performance: decision trees, perceptron, support vector machines, etc..
+   Be aware that support vector machines take a long time to train: up to one hour.
+
+Answer:
+1. Almost, does not contain the values of the previous chunk tags in the first part of the window.
+2. See results/ml_cunker.png
+3. See results/ml_chunker_rem_words.png
+4. The classifier is linear_model.LogisticRegression(penalty='l2', dual=True, solver='liblinear')
+   For different classifiers, see classifier_perceptron.png and classifier_decision_tree.png.
+
+Improving the Chunker
+1. Implement one of these two options, the first one being easier.
+   * Complement the feature vector used in the previous section with the two dynamic features, c i-2 , c i-1 ,
+     and train a new model. You will need to modify the extract_features_sent and predict functions.
+   * In his experiments, your teacher obtained a F1 score of 92.33 with a dual L2-regularized logistic regression
+   * A frequent mistake in the labs is to use the gold-standard chunks from the test set.
+     Be aware that when you predict the test set, you do not know the dynamic features in advance and you must not use the ones from the test file.
+     You will use the two previous chunk tags that you have predicted.
+   * You need to reach a global F1 score of 92 to pass this laboratory.
