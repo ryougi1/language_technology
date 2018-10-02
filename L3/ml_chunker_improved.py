@@ -31,7 +31,7 @@ def extract_features(sentences, w_size, feature_names):
     return X_l, y_l
 
 
-def extract_features_sent(sentence, w_size, feature_names):
+def extract_features_sent(sentence, w_size, feature_names, training=True):
     """
     Extract the features from one sentence
     returns X and y, where X is a list of dictionaries and
@@ -71,12 +71,17 @@ def extract_features_sent(sentence, w_size, feature_names):
         # The POS
         for j in range(2 * w_size + 1):
             x.append(padded_sentence[i + j][1])
+        # Extract the additional features here, returned in X
         # The chunks (Up to the word)
-        for j in range(w_size):
-            x.append(padded_sentence[i + j][2])
+        if(training):
+            for j in range(w_size):
+                x.append(padded_sentence[i + j][2])
 
         # We represent the feature vector as a dictionary
-        X.append(dict(zip(feature_names, x)))
+        if(training):
+            X.append(dict(zip(feature_names, x)))
+        else:
+            X.append(dict(zip(feature_names[:-w_size], x)))
         # The classes are stored in a list
         y.append(padded_sentence[i + w_size][2])
     return X, y
@@ -84,21 +89,29 @@ def extract_features_sent(sentence, w_size, feature_names):
 
 def predict(test_sentences, feature_names, f_out):
     for test_sentence in test_sentences:
-        X_test_dict, y_test = extract_features_sent(test_sentence, w_size, feature_names)
-
-
-        # Vectorize the test sentence and one hot encoding
-        X_test = vec.transform(X_test_dict)
-        # Predicts the chunks and returns numbers
-        y_test_predicted = classifier.predict(X_test)
-
-
+        # Initiliaze chunk predictions to BOS.
+        y_test_predicted_saved = ['BOS'] * 2
+        X_test_dict, y_test = extract_features_sent(test_sentence, w_size, feature_names, False)
+        for word in X_test_dict:
+            '''
+            Predict dynamically. Use previous two predicted chunks in transform,
+            not the actual chunks given in the test file.
+            '''
+            word['chunk_n2'] = y_test_predicted_saved[-2]
+            word['chunk_n1'] = y_test_predicted_saved[-1]
+            # Vectorize the test sentence and one hot encoding
+            X_test = vec.transform(word)
+            # Predicts the chunks and returns numbers
+            y_test_predicted = classifier.predict(X_test)
+            y_test_predicted_saved.append(y_test_predicted[0])
+        # y_test_predicted_saved = y_test_predicted_saved[w_size:]
         # Appends the predicted chunks as a last column and saves the rows
         rows = test_sentence.splitlines()
-        rows = [rows[i] + ' ' + y_test_predicted[i] for i in range(len(rows))]
+        rows = [rows[i] + ' ' + y_test_predicted_saved[i+2] for i in range(len(rows))]
         for row in rows:
             f_out.write(row + '\n')
         f_out.write('\n')
+        first_sentence = False
     f_out.close()
 
 
@@ -107,6 +120,8 @@ if __name__ == '__main__':
     train_corpus = 'data/train.txt'
     test_corpus = 'data/test.txt'
     w_size = 2  # The size of the context window to the left and right of the word
+
+    # Add additional features here
     feature_names = ['word_n2', 'word_n1', 'word', 'word_p1', 'word_p2',
                      'pos_n2', 'pos_n1', 'pos', 'pos_p1', 'pos_p2', 'chunk_n2', 'chunk_n1']
 
@@ -117,8 +132,8 @@ if __name__ == '__main__':
     X_dict contain the features for that word whilst y contains the chunk.
     '''
     X_dict, y = extract_features(train_sentences, w_size, feature_names)
-    # print(X_dict[2])
-    # print(y[2])
+    # print(X_dict[1])
+    # print(y[1])
 
     print("Encoding the features...")
     # Vectorize the feature matrix and carry out a one-hot encoding
