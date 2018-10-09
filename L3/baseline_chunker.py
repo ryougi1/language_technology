@@ -121,7 +121,7 @@ if __name__ == '__main__':
     '''
     Apply chunker to test file. That is, try to predict the chunk for the words
     in the test file using our model, compare predicted chunk with actual chunk
-    and calculate of accuracy. Print results to 'out' file. 
+    and calculate of accuracy. Print results to 'out' file.
     '''
     predicted = predict(model, test_corpus)
     accuracy = eval(predicted)
