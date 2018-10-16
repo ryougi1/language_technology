@@ -43,7 +43,10 @@ def train(corpus):
                 chunk_dist[pos][chunk] = 1
             else:
                 chunk_dist[pos][chunk] += 1
-    # print(chunk_dist['JJR'])
+    # print('\nJJR:', chunk_dist['JJR'])
+    # print('\nCC:', chunk_dist['CC'])
+    # print('\nNN:', chunk_dist['NN'])
+
 
     # We determine the best association
     pos_chunk = {}
