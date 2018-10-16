@@ -7,18 +7,32 @@ def extract(stack, queue, graph, feature_names, sentence):
     Extract the features from one sentence
     Extracted features are determined by feature_names
     Returns the extracted features in a dictionary format compatible with scikit-learn
-    TODO: Add final feature
     '''
     global do_print
     vec = list()
-    for key in feature_names[:len(feature_names)-2]: # can_re and can_la added later
+    for key in feature_names[:len(feature_names)-2]: # can_re and can_la added after
         try:
-            if key[:5] == 'stack':
-                if key[-4:] == 'form':
-                    vec.append(stack[int(key[5:6])]['form'])
-                elif key[-3:] == 'POS':
-                    vec.append(stack[int(key[5:6])]['postag'])
-            else:
+            if key[:5] == 'stack': # Can be current, previous, or next
+                if key[6:10] == 'next': # Is next
+                    if key[-4:] == 'form':
+                        form = sentence[int(stack[0]['id'])+1]['form']
+                        vec.append(form)
+                    elif key[-3:] == 'POS':
+                        POS = sentence[int(stack[0]['id'])+1]['postag']
+                        vec.append(POS)
+                elif key[6:10] == 'prev': # Is previous
+                    if key[-4:] == 'form':
+                        form = sentence[int(stack[0]['id'])-1]['form']
+                        vec.append(form)
+                    elif key[-3:] == 'POS':
+                        POS = sentence[int(stack[0]['id'])-1]['postag']
+                        vec.append(POS)
+                else: # Is current
+                    if key[-4:] == 'form':
+                        vec.append(stack[int(key[5:6])]['form'])
+                    elif key[-3:] == 'POS':
+                        vec.append(stack[int(key[5:6])]['postag'])
+            else: # Is queue
                 if key[-4:] == 'form':
                     vec.append(queue[int(key[5:6])]['form'])
                 elif key[-3:] == 'POS':

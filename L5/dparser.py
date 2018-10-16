@@ -8,6 +8,7 @@ import sys, time
 from sklearn import metrics
 from sklearn import linear_model
 from sklearn.feature_extraction import DictVectorizer
+import pickle
 
 def reference(stack, queue, graph):
     """
@@ -61,8 +62,7 @@ def get_feature_names(feature_type):
     elif feature_type == 2:
         return ['stack0_POS', 'stack1_POS', 'stack0_form', 'stack1_form', 'queue0_POS', 'queue1_POS', 'queue0_form', 'queue1_form', 'can-re', 'can-la']
     elif feature_type == 3:
-        #TODO: Needs final feature
-        return ['stack0_POS', 'stack1_POS', 'stack0_form', 'stack1_form', 'queue0_POS', 'queue1_POS', 'queue0_form', 'queue1_form', 'next_POS', 'next_form', 'can-re', 'can-la']
+        return ['stack0_POS', 'stack1_POS', 'stack0_form', 'stack1_form', 'queue0_POS', 'queue1_POS', 'queue0_form', 'queue1_form', 'stack_next_POS', 'stack_next_form', 'stack_prev_POS', 'stack_prev_form', 'can-re', 'can-la']
     else:
         print('Feature type incorrect, exiting')
         sys.exit()
@@ -137,17 +137,25 @@ if __name__ == '__main__':
     sentences = conll.read_sentences(train_file)
     formatted_corpus = conll.split_rows(sentences, column_names_2006)
 
-    # Generate the three scikit-learn models using the code models from the chunking labs.
-    # You will evaluate the model accuracies using the classification report produced by scikit-learn
-    # and the correctly classified instances.
-    features_train, transitions_train = extract_features(formatted_corpus, feature_names, do_print = True)
-    vec = DictVectorizer(sparse=True)
-    X  = vec.fit_transform(features_train)
-    classifier = linear_model.LogisticRegression(penalty='l2', dual=True, solver='liblinear')
-    model = classifier.fit(X, transitions_train)
-    # y_test_predicted = classifier.predict(X)
-    # print("Classification report for classifier %s:\n%s\n"
-    #   % (classifier, metrics.classification_report(transitions_train, y_test_predicted)))
+    try:
+        model = pickle.load(open("model", "rb"))
+        vec = pickle.load(open("vec", "rb"))
+        feature_names = pickle.load(open("feature_names", "rb"))
+    except FileNotFoundError:
+        # Generate the three scikit-learn models using the code models from the chunking labs.
+        # You will evaluate the model accuracies using the classification report produced by scikit-learn
+        # and the correctly classified instances.
+        features_train, transitions_train = extract_features(formatted_corpus, feature_names, do_print = True)
+        vec = DictVectorizer(sparse=True)
+        X  = vec.fit_transform(features_train)
+        classifier = linear_model.LogisticRegression(penalty='l2', dual=True, solver='liblinear')
+        model = classifier.fit(X, transitions_train)
+        # y_test_predicted = classifier.predict(X)
+        # print("Classification report for classifier %s:\n%s\n"
+        #   % (classifier, metrics.classification_report(transitions_train, y_test_predicted)))
+        pickle.dump(model, open("model", "wb"))
+        pickle.dump(vec, open("vec", "wb"))
+        pickle.dump(feature_names, open("feature_names", "rb"))
 
     '''
     Testing - Assignment 6
@@ -170,7 +178,7 @@ if __name__ == '__main__':
             graph['deprels']['0'] = 'ROOT'
             while queue:
                 X_test = vec.transform(features.extract(stack, queue, graph, feature_names, sentence))
-                predicted_transition = model.predict(X_test)[0]
+                predicted_transition = classifier.predict(X_test)[0]
 
                 stack, queue, graph, trans = parse_ml(stack, queue, graph, predicted_transition)
                 y_test_transitions.append(trans)
@@ -178,35 +186,10 @@ if __name__ == '__main__':
             stack, graph = transition.empty_stack(stack, graph)
 
             # Poorman's projectivization to have well-formed graphs.
-            # TODO: Adapt to test set
             for word in sentence:
                 word['head'] = graph['heads'][word['id']]
+                word['deprel'] = graph['deprels'][word['id']]
+                print(word)
 
-    conll.save('results', formatted_corpus, column_names_2006_test)
+    conll.save('results1', formatted_corpus, column_names_2006)
     print("\n--- Execution time: %s seconds ---" % (time.time() - start_time))
-
-
-'''
-# Excerpt from previous lab
-for test_sentence in test_sentences:
-        # Initiliaze chunk predictions to BOS.
-        y_test_predicted_saved = ['BOS'] * 2
-        X_test_dict, y_test = extract_features_sent(test_sentence, w_size, feature_names, False)
-        for word in X_test_dict:
-            word['chunk_n2'] = y_test_predicted_saved[-2]
-            word['chunk_n1'] = y_test_predicted_saved[-1]
-            # Vectorize the test sentence and one hot encoding
-            X_test = vec.transform(word)
-            # Predicts the chunks and returns numbers
-            y_test_predicted = classifier.predict(X_test)
-            y_test_predicted_saved.append(y_test_predicted[0])
-        # y_test_predicted_saved = y_test_predicted_saved[w_size:]
-        # Appends the predicted chunks as a last column and saves the rows
-        rows = test_sentence.splitlines()
-        rows = [rows[i] + ' ' + y_test_predicted_saved[i+2] for i in range(len(rows))]
-        for row in rows:
-            f_out.write(row + '\n')
-        f_out.write('\n')
-        first_sentence = False
-    f_out.close()
-'''
