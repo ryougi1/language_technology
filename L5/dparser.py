@@ -57,11 +57,11 @@ def get_feature_names(feature_type):
            LEX, POS, fw, etc.
     These sets will include two additional Boolean parameters, "can do left arc" and "can do reduce", which will model constraints on the parser's actions. In total, the feature sets will then have six, respectively ten and 14, parameters.
     '''
-    if feature_type == 1:
+    if feature_type == '1':
         return ['stack0_POS', 'stack0_form', 'queue0_POS', 'queue0_form', 'can_re', 'can_la']
-    elif feature_type == 2:
+    elif feature_type == '2':
         return ['stack0_POS', 'stack1_POS', 'stack0_form', 'stack1_form', 'queue0_POS', 'queue1_POS', 'queue0_form', 'queue1_form', 'can-re', 'can-la']
-    elif feature_type == 3:
+    elif feature_type == '3':
         return ['stack0_POS', 'stack1_POS', 'stack0_form', 'stack1_form', 'queue0_POS', 'queue1_POS', 'queue0_form', 'queue1_form', 'stack_next_POS', 'stack_next_form', 'stack_prev_POS', 'stack_prev_form', 'can-re', 'can-la']
     else:
         print('Feature type incorrect, exiting')
@@ -110,16 +110,13 @@ def parse_ml(stack, queue, graph, trans):
     elif stack and trans == 're':
         stack, queue, graph = transition.reduce(stack, queue, graph)
         return(stack, queue, graph, 're')
-    elif stack and trans == 'sh':
+    else:
         stack, queue, graph = transition.shift(stack, queue, graph)
         return(stack, queue, graph, 'sh')
-    else:
-        print("Unable to perform transition:", trans)
-        sys.exit()
 
 if __name__ == '__main__':
     '''
-    Setup - Assignment 5
+    Setup and Training - Assignment 5
     '''
     start_time = time.time()
     if(len(sys.argv) < 2):
@@ -129,23 +126,19 @@ if __name__ == '__main__':
     test_file = 'data/swedish_talbanken05_test_blind.conll'
     column_names_2006 = ['id', 'form', 'lemma', 'cpostag', 'postag', 'feats', 'head', 'deprel', 'phead', 'pdeprel']
     column_names_2006_test = ['id', 'form', 'lemma', 'cpostag', 'postag', 'feats']
-    feature_names = get_feature_names(int(sys.argv[1]))
-
-    '''
-    Training - Assignment 5
-    '''
+    feature_type = sys.argv[1]
+    feature_names = get_feature_names(feature_type)
     sentences = conll.read_sentences(train_file)
     formatted_corpus = conll.split_rows(sentences, column_names_2006)
+    features_train, transitions_train = extract_features(formatted_corpus, feature_names, do_print = True)
 
     try:
-        model = pickle.load(open("model", "rb"))
-        vec = pickle.load(open("vec", "rb"))
-        feature_names = pickle.load(open("feature_names", "rb"))
+        with open("pickle/model"+feature_type, "rb") as m:
+            model = pickle.load(m)
+        with open("pickle/vec"+feature_type, "rb") as v:
+            vec = pickle.load(v)
+        print("Succesfully loaded models and vectorizer")
     except FileNotFoundError:
-        # Generate the three scikit-learn models using the code models from the chunking labs.
-        # You will evaluate the model accuracies using the classification report produced by scikit-learn
-        # and the correctly classified instances.
-        features_train, transitions_train = extract_features(formatted_corpus, feature_names, do_print = True)
         vec = DictVectorizer(sparse=True)
         X  = vec.fit_transform(features_train)
         classifier = linear_model.LogisticRegression(penalty='l2', dual=True, solver='liblinear')
@@ -153,43 +146,51 @@ if __name__ == '__main__':
         # y_test_predicted = classifier.predict(X)
         # print("Classification report for classifier %s:\n%s\n"
         #   % (classifier, metrics.classification_report(transitions_train, y_test_predicted)))
-        pickle.dump(model, open("model", "wb"))
-        pickle.dump(vec, open("vec", "wb"))
-        pickle.dump(feature_names, open("feature_names", "rb"))
+        with open("pickle/model"+feature_type, "wb") as m:
+            pickle.dump(model, m)
+        with open("pickle/vec"+feature_type, "wb") as v:
+            pickle.dump(vec, v)
 
     '''
     Testing - Assignment 6
     '''
     sentences = conll.read_sentences(test_file)
-    formatted_corpus = conll.split_rows(sentences, column_names_2006_test)
+    # formatted_corpus = conll.split_rows(sentences, column_names_2006_test)
+    formatted_corpus = conll.split_rows(sentences, column_names_2006)
 
     y_test_transitions = []
     sent_cnt = 0
+
     for sentence in formatted_corpus:
         sent_cnt += 1
         if sent_cnt % 1000 == 0:
             print(sent_cnt, 'sentence on', len(formatted_corpus), flush = True)
-            stack = []
-            queue = list(sentence)
-            graph = {}
-            graph['heads'] = {}
-            graph['heads']['0'] = '0'
-            graph['deprels'] = {}
-            graph['deprels']['0'] = 'ROOT'
-            while queue:
-                X_test = vec.transform(features.extract(stack, queue, graph, feature_names, sentence))
-                predicted_transition = classifier.predict(X_test)[0]
+        stack = []
+        queue = list(sentence)
+        graph = {}
+        graph['heads'] = {}
+        graph['heads']['0'] = '0'
+        graph['deprels'] = {}
+        graph['deprels']['0'] = 'ROOT'
+        while queue:
+            X_test = vec.transform(features.extract(stack, queue, graph, feature_names, sentence))
+            predicted_transition = model.predict(X_test)[0]
 
-                stack, queue, graph, trans = parse_ml(stack, queue, graph, predicted_transition)
-                y_test_transitions.append(trans)
+            stack, queue, graph, trans = parse_ml(stack, queue, graph, predicted_transition)
+            y_test_transitions.append(trans)
 
-            stack, graph = transition.empty_stack(stack, graph)
+        stack, graph = transition.empty_stack(stack, graph)
 
-            # Poorman's projectivization to have well-formed graphs.
-            for word in sentence:
+        # Poorman's projectivization to have well-formed graphs.
+        for word in sentence:
+            try:
                 word['head'] = graph['heads'][word['id']]
+            except:
+                word['head'] = '_'
+            try:
                 word['deprel'] = graph['deprels'][word['id']]
-                print(word)
+            except:
+                word['deprel'] = '_'
 
-    conll.save('results1', formatted_corpus, column_names_2006)
+    conll.save('results'+feature_type, formatted_corpus, column_names_2006)
     print("\n--- Execution time: %s seconds ---" % (time.time() - start_time))
